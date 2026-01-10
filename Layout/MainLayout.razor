@@ -1,0 +1,24 @@
+﻿@inherits LayoutComponentBase
+@inject PortfolioSite.Services.LanguageService Lang
+
+<div class="page">
+    <main>
+        <NavMenu />
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+@code {
+// Sayfa render edildikten sonra (JS kullanılabilir hale gelince) çalışır
+protected override async Task OnAfterRenderAsync(bool firstRender)
+{
+if (firstRender)
+{
+// Hafızadaki dili yükle
+await Lang.InitAsync();
+StateHasChanged(); // Ekranı yenile
+}
+}
+}

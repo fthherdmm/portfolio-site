@@ -1,0 +1,270 @@
+﻿@page "/"
+@using PortfolioSite.Models
+@using PortfolioSite.Services
+@using System.Globalization
+@inject Supabase.Client SupabaseClient
+@inject LanguageService Lang
+@implements IDisposable
+
+<PageTitle>Portfolio | @Lang.Get("Home_Title")</PageTitle>
+
+<div class="hero-section">
+    <div class="hero-glow"></div>
+
+    <div class="container position-relative" style="z-index: 2;">
+        <div class="badge-container mb-3 fade-in">
+            <span class="hero-badge">
+                @Lang.Get("Hero_Badge")
+            </span>
+        </div>
+
+        <h1 class="hero-title fade-in">
+            @Lang.Get("Hero_Title1") <br />
+            <span class="text-gradient">@Lang.Get("Hero_Title2")</span>
+        </h1>
+
+        <p class="hero-desc fade-in">
+            @Lang.Get("Hero_Desc")
+        </p>
+
+        <div class="hero-actions fade-in" style="margin-top: 2.5rem;">
+            <a href="profile" class="btn btn-primary-glow">
+                @Lang.Get("Btn_Profile")
+            </a>
+            <a href="https://www.linkedin.com/in/fatih-erdem-89237823b/" target="_blank" class="btn btn-primary-glow">
+                @Lang.Get("Btn_Connect")
+            </a>
+        </div>
+    </div>
+</div>
+
+@if (isLoading)
+{
+<div class="loading-container">
+    <div class="spinner-border text-primary" role="status"></div>
+</div>
+}
+else
+{
+<div class="container mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4 px-2">
+        <h3 class="fw-bold text-white m-0">@Lang.Get("Sec_RecentProjects")</h3>
+        <a href="projects" class="btn btn-sm btn-outline-secondary rounded-pill px-3">@Lang.Get("Btn_SeeAll")</a>
+    </div>
+
+    <div class="project-grid">
+        @foreach (var repo in recentProjects)
+        {
+        <div class="project-card fade-in">
+            <a href="/project/@repo.GithubId" class="text-decoration-none">
+                <div class="card-banner" style="@GetGradient(repo.Name)">
+                    <span class="banner-icon">@GetIcon(repo.Name)</span>
+                </div>
+            </a>
+
+            <div class="card-content">
+                <div class="card-category">@Lang.Get("Badge_Project")</div>
+                <a href="/project/@repo.GithubId" class="text-decoration-none">
+                    <h3 class="card-title text-white">@repo.Name</h3>
+                </a>
+                <p class="card-desc">
+                    @(string.IsNullOrEmpty(repo.Description) ? Lang.Get("Msg_NoDesc") : repo.Description)
+                </p>
+                <div class="card-footer-custom mt-auto">
+                    <div class="status-pill">
+                        <span style="width:8px; height:8px; background-color: #4ade80; border-radius:50%;"></span>
+                        @repo.LastActivityAt.ToString("MMM yyyy")
+                    </div>
+                    <a href="/project/@repo.GithubId" class="btn btn-sm text-white px-3 py-1" style="background-color: var(--accent-blue); border-radius: 6px; font-weight:600; font-size: 0.85rem; border:none;">
+                        @Lang.Get("Btn_Inspect")
+                    </a>
+                </div>
+            </div>
+        </div>
+        }
+    </div>
+</div>
+
+<div class="container pb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4 px-2">
+        <h3 class="fw-bold text-white m-0">@Lang.Get("Sec_RecentLogs")</h3>
+        <a href="devlog" class="btn btn-sm btn-outline-secondary rounded-pill px-3">@Lang.Get("Btn_SeeAll")</a>
+    </div>
+
+    @if (recentLogs.Count > 0)
+    {
+    <div class="row">
+        @foreach (var log in recentLogs)
+        {
+        // Dil ayarı (Tarih formatı ve İçerik seçimi için)
+        var culture = Lang.CurrentLanguage == "EN" ? new CultureInfo("en-US") : new CultureInfo("tr-TR");
+
+        // İçerik Seçimi: İngilizce varsa ve dil EN ise onu göster
+        string displayContent = log.Content;
+        if (Lang.CurrentLanguage == "EN" && !string.IsNullOrEmpty(log.ContentEn))
+        {
+        displayContent = log.ContentEn;
+        }
+
+        <div class="mb-4">
+            <a href="devlog" class="text-decoration-none h-100 d-block">
+                <div class="log-preview-card fade-in h-100">
+                    <div class="log-date">
+                        <span class="fs-4 fw-bold text-white">@log.LogDate.ToString("dd")</span>
+                        <span class="text-uppercase small fw-bold" style="color: var(--accent-blue);">
+                                        @log.LogDate.ToString("MMM", culture)
+                                    </span>
+                    </div>
+
+                    <div class="log-preview-body">
+                        <p class="multi-line-truncate">
+                            @displayContent
+                        </p>
+
+                        <div class="read-more-btn">
+                            @Lang.Get("Btn_ReadMore")
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        }
+    </div>
+    }
+    else
+    {
+    <div class="text-center text-muted py-4">@Lang.Get("Msg_NoLogs")</div>
+    }
+</div>
+}
+
+<style>
+    /* KART TASARIMI */
+    .log-preview-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        transition: transform 0.2s, border-color 0.2s, background-color 0.2s;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .log-preview-card:hover {
+        transform: translateY(-5px);
+        border-color: var(--accent-blue);
+        background: rgba(30, 41, 59, 0.6);
+    }
+
+    .log-date {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 0.8rem;
+    }
+
+    .log-preview-body {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+    }
+
+    .multi-line-truncate {
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: #e2e8f0;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        margin-bottom: 1rem;
+        white-space: pre-wrap;
+    }
+
+    .read-more-btn {
+        margin-top: auto;
+        color: var(--accent-blue);
+        font-weight: 700;
+        font-size: 0.9rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        transition: gap 0.2s ease;
+    }
+
+    .log-preview-card:hover .read-more-btn {
+        gap: 10px;
+        text-decoration: underline;
+    }
+
+    .fade-in { animation: fadeIn 0.5s ease-out; }
+    @("@keyframes") fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+
+@code {
+private List<Repository> recentProjects = new();
+private List<DevLog> recentLogs = new();
+private bool isLoading = true;
+
+protected override async Task OnInitializedAsync()
+{
+Lang.OnChange += StateHasChanged;
+
+try
+{
+// Son 3 Proje
+var projResp = await SupabaseClient.From<Repository>()
+.Order("last_activity_at", Supabase.Postgrest.Constants.Ordering.Descending)
+.Get();
+recentProjects = projResp.Models.Where(x => x.IsVisible).Take(3).ToList();
+
+// Son 3 Günlük
+var logResp = await SupabaseClient.From<DevLog>()
+.Order("log_date", Supabase.Postgrest.Constants.Ordering.Descending)
+.Limit(3)
+.Get();
+recentLogs = logResp.Models;
+}
+catch (Exception ex)
+{
+Console.WriteLine(ex.Message);
+}
+finally
+{
+isLoading = false;
+}
+}
+
+public void Dispose()
+{
+Lang.OnChange -= StateHasChanged;
+}
+
+// Renk ve İkon Yardımcıları
+private string GetGradient(string name)
+{
+int hash = name.Length + (int)name[0];
+string[] gradients = new[]
+{
+"background: linear-gradient(135deg, #6366f1, #a855f7);",
+"background: linear-gradient(135deg, #3b82f6, #06b6d4);",
+"background: linear-gradient(135deg, #f59e0b, #ef4444);",
+"background: linear-gradient(135deg, #10b981, #3b82f6);",
+"background: linear-gradient(135deg, #ec4899, #8b5cf6);"
+};
+return gradients[hash % gradients.Length];
+}
+
+private string GetIcon(string name)
+{
+if (name.ToLower().Contains("game")) return "🎮";
+if (name.ToLower().Contains("site") || name.ToLower().Contains("web")) return "🌐";
+if (name.ToLower().Contains("bot")) return "🤖";
+if (name.ToLower().Contains("app")) return "📱";
+if (name.ToLower().Contains("api")) return "⚡";
+return "💻";
+}
+}

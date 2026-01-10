@@ -1,0 +1,157 @@
+﻿@page "/timeline"
+@using PortfolioSite.Models
+@using PortfolioSite.Services
+@using System.Globalization 
+@inject Supabase.Client SupabaseClient
+@inject LanguageService Lang
+@implements IDisposable
+
+<PageTitle>Portfolio | @Lang.Get("Timeline_PageTitle")</PageTitle>
+
+<div class="container py-5">
+    <div class="row mb-5 text-center fade-in">
+        <div class="col-12">
+            <h2 class="fw-bold text-white">@Lang.Get("Timeline_Header")</h2>
+            <p style="color: var(--text-gray);">@Lang.Get("Timeline_Desc")</p>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2 text-muted">@Lang.Get("Timeline_Loading")</p>
+        </div>
+    }
+    else
+    {
+        <div class="timeline-container">
+            @foreach (var item in commits)
+            {
+                var repo = GetRepo(item.RepoId);
+                var repoName = repo?.Name ?? Lang.Get("Timeline_Unknown");
+                var repoUrl = repo?.HtmlUrl ?? "#";
+                
+                // Tarih Kültürü Seçimi (TR/EN)
+                var culture = Lang.CurrentLanguage == "EN" ? new CultureInfo("en-US") : new CultureInfo("tr-TR");
+
+                // 🔥 NOT DİL KONTROLÜ BURADA YAPILIYOR
+                string displayNote = item.MyJournalEntry; // Varsayılan TR
+                if (Lang.CurrentLanguage == "EN" && !string.IsNullOrEmpty(item.MyJournalEntryEn))
+                {
+                    displayNote = item.MyJournalEntryEn;
+                }
+
+                <div class="timeline-item fade-in">
+                    <div class="timeline-date">
+                        <span class="d-block fw-bold text-white">
+                            @item.CommittedAt.ToString("dd MMM", culture)
+                        </span>
+                        <small class="text-muted">@item.CommittedAt.ToString("HH:mm")</small>
+                    </div>
+
+                    <div class="timeline-marker">
+                        <div class="dot" style="@GetMarkerColor(repoName)"></div>
+                        <div class="line"></div>
+                    </div>
+
+                    <div class="timeline-content">
+                        <div class="card border-0 overflow-hidden" style="background-color: var(--bg-card); border: 1px solid var(--border-color) !important;">
+                            
+                            <div class="card-header border-0 p-2 px-3 d-flex justify-content-between align-items-center" 
+                                 style="@GetGradient(repoName)">
+                                <a href="@repoUrl" target="_blank" class="text-white text-decoration-none fw-bold" style="text-shadow: 0 1px 2px rgba(0,0,0,0.3);">
+                                    <span style="opacity:0.8;">📂</span> @repoName
+                                </a>
+                                <a href="/project/@item.RepoId" class="text-white text-decoration-none opacity-50 hover-opacity-100">
+                                    <small>@Lang.Get("Timeline_Detail")</small>
+                                </a>
+                            </div>
+
+                            <div class="card-body p-3">
+                                <p class="mb-0 text-white-50" style="font-family: 'Consolas', monospace; font-size: 0.95rem;">
+                                    <span style="color: var(--accent-blue); margin-right:5px;">$</span> @item.Message
+                                </p>
+
+                                @if (!string.IsNullOrEmpty(displayNote))
+                                {
+                                    <div class="mt-3 p-3 rounded position-relative" style="background-color: rgba(255, 208, 47, 0.05); border: 1px dashed rgba(255, 208, 47, 0.4);">
+                                        <div style="position: absolute; top: -10px; left: 15px; background: var(--bg-card); padding: 0 5px; color: #FFD02F; font-size: 0.8rem;">
+                                            @Lang.Get("Timeline_Note")
+                                        </div>
+                                        <p class="m-0 text-light fst-italic">@displayNote</p>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<Commit> commits = new();
+    private List<Repository> repos = new();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // 1. Dil Değişimini Dinle
+        Lang.OnChange += StateHasChanged;
+
+        try
+        {
+            var repoResponse = await SupabaseClient.From<Repository>().Get();
+            repos = repoResponse.Models;
+
+            var commitResponse = await SupabaseClient.From<Commit>()
+                                     .Order("committed_at", Supabase.Postgrest.Constants.Ordering.Descending)
+                                     .Limit(30)
+                                     .Get();
+            
+            commits = commitResponse.Models;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Hata: " + ex.Message);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    // 2. Aboneliği İptal Et
+    public void Dispose()
+    {
+        Lang.OnChange -= StateHasChanged;
+    }
+
+    private Repository? GetRepo(long repoId)
+    {
+        return repos.FirstOrDefault(r => r.GithubId == repoId);
+    }
+
+    private string GetGradient(string name)
+    {
+        int hash = name.Length + (int)name[0];
+        string[] gradients = new[]
+        {
+            "background: linear-gradient(90deg, #6366f1, #a855f7);", 
+            "background: linear-gradient(90deg, #3b82f6, #06b6d4);", 
+            "background: linear-gradient(90deg, #f59e0b, #ef4444);", 
+            "background: linear-gradient(90deg, #10b981, #3b82f6);", 
+            "background: linear-gradient(90deg, #ec4899, #8b5cf6);"  
+        };
+        return gradients[hash % gradients.Length];
+    }
+
+    private string GetMarkerColor(string name)
+    {
+        int hash = name.Length + (int)name[0];
+        string[] colors = new[] { "#a855f7", "#06b6d4", "#ef4444", "#10b981", "#8b5cf6" };
+        return $"background-color: {colors[hash % colors.Length]}; box-shadow: 0 0 10px {colors[hash % colors.Length]}80;";
+    }
+}

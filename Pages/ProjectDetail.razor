@@ -1,0 +1,198 @@
+﻿@page "/project/{GithubId:long}"
+@using PortfolioSite.Models
+@using PortfolioSite.Services
+@using System.Globalization
+@inject Supabase.Client SupabaseClient
+@inject LanguageService Lang
+@implements IDisposable
+
+<PageTitle>@(string.IsNullOrEmpty(repoName) ? Lang.Get("ProjDet_Title") : repoName)</PageTitle>
+
+@if (isLoading)
+{
+    <div class="loading-container">
+        <div class="spinner-border text-primary" role="status"></div>
+    </div>
+}
+else if (repo == null)
+{
+    <div class="container py-5 text-center">
+        <h3 class="text-white">@Lang.Get("ProjDet_NotFound_Title")</h3>
+        <p class="text-muted">@Lang.Get("ProjDet_NotFound_Desc")</p>
+        <a href="/" class="btn btn-primary mt-3">@Lang.Get("Btn_BackHome")</a>
+    </div>
+}
+else
+{
+    <div class="project-header" style="@GetHeaderGradient(repoName)">
+        <div class="container text-center text-white pt-5 pb-5">
+            <div class="header-content mt-4">
+                <span class="badge bg-dark bg-opacity-50 border border-secondary mb-3">PROJECT</span>
+                <h1 class="display-3 fw-bold mb-3">@repo.Name</h1>
+                
+                <div class="d-flex justify-content-center gap-3">
+                    <a href="projects" class="btn btn-sm btn-outline-light rounded-pill px-4">@Lang.Get("Btn_Back")</a>
+                    <a href="@repo.HtmlUrl" target="_blank" class="btn btn-sm btn-light rounded-pill px-4 text-dark fw-bold">GitHub ↗</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container" style="margin-top: -50px; position: relative; z-index: 2;">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                
+                <div class="card border-0 shadow-lg mb-5" style="background-color: var(--bg-card); border: 1px solid var(--border-color) !important;">
+                    <div class="card-body p-5">
+                        <div class="d-flex align-items-center mb-4">
+                            <span style="font-size: 1.5rem; margin-right: 10px;">📝</span>
+                            <h3 class="fw-bold text-white m-0">@Lang.Get("ProjDet_Story_Title")</h3>
+                        </div>
+
+                        @{
+                            // Hikaye Dil Kontrolü
+                            string displayStory = repo.MyProjectStory ?? "";
+                            if (Lang.CurrentLanguage == "EN" && !string.IsNullOrEmpty(repo.MyProjectStoryEn))
+                            {
+                                displayStory = repo.MyProjectStoryEn;
+                            }
+                        }
+
+                        @if (!string.IsNullOrEmpty(displayStory))
+                        {
+                            <div class="story-text">
+                                @((MarkupString)displayStory.Replace("\n", "<br>"))
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted fst-italic">@Lang.Get("ProjDet_NoStory")</p>
+                        }
+                    </div>
+                </div>
+
+                <h4 class="text-white fw-bold mb-4 ps-2 border-start border-4 border-primary">@Lang.Get("ProjDet_DevLog_Title")</h4>
+                
+                <div class="timeline-container">
+                    @foreach (var commit in commits)
+                    {
+                        // Tarih Kültürü
+                        var culture = Lang.CurrentLanguage == "EN" ? new CultureInfo("en-US") : new CultureInfo("tr-TR");
+                        
+                        // Not Dil Kontrolü
+                        string displayNote = commit.MyJournalEntry;
+                        if (Lang.CurrentLanguage == "EN" && !string.IsNullOrEmpty(commit.MyJournalEntryEn))
+                        {
+                            displayNote = commit.MyJournalEntryEn;
+                        }
+
+                        <div class="timeline-item">
+                            <div class="timeline-date text-end pe-3" style="width: 80px;">
+                                <span class="d-block text-white fw-bold">@commit.CommittedAt.ToString("dd MMM", culture)</span>
+                                <small class="text-muted">@commit.CommittedAt.ToString("HH:mm")</small>
+                            </div>
+                            
+                            <div class="timeline-marker position-relative">
+                                <div class="dot bg-primary shadow-sm" style="width: 12px; height: 12px; border-radius: 50%; z-index: 2;"></div>
+                                <div class="line bg-secondary bg-opacity-25" style="width: 2px; position: absolute; top: 12px; bottom: -30px; left: 5px;"></div>
+                            </div>
+
+                            <div class="timeline-content ps-4 pb-4 flex-grow-1">
+                                <div class="card border-0 bg-dark bg-opacity-50 p-3" style="border-radius: 12px;">
+                                    <code class="text-info d-block mb-2">> @commit.Message</code>
+                                    
+                                    @if (!string.IsNullOrEmpty(displayNote))
+                                    {
+                                        <p class="text-white-50 m-0 fst-italic border-top border-secondary border-opacity-25 pt-2 mt-2">
+                                            "@displayNote"
+                                        </p>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    
+                    @if (commits.Count == 0)
+                    {
+                        <div class="text-muted text-center py-4">@Lang.Get("ProjDet_NoCommits")</div>
+                    }
+                </div>
+
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .story-text {
+        color: #d1d5db;
+        line-height: 1.8;
+        font-size: 1.1rem;
+        white-space: pre-wrap;
+    }
+    .project-header {
+        position: relative;
+        padding-bottom: 3rem;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+</style>
+
+@code {
+    [Parameter] public long GithubId { get; set; }
+    private Repository? repo;
+    private List<Commit> commits = new();
+    private bool isLoading = true;
+    private string repoName = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // 1. Dil Değişimini Dinle
+        Lang.OnChange += StateHasChanged;
+
+        try {
+            var repoResponse = await SupabaseClient.From<Repository>()
+                .Filter("github_id", Supabase.Postgrest.Constants.Operator.Equals, GithubId.ToString()) 
+                .Get();
+            
+            repo = repoResponse.Models.FirstOrDefault();
+            
+            if (repo != null)
+            {
+                repoName = repo.Name;
+                
+                var commitResponse = await SupabaseClient.From<Commit>()
+                    .Filter("repo_id", Supabase.Postgrest.Constants.Operator.Equals, GithubId.ToString())
+                    .Order("committed_at", Supabase.Postgrest.Constants.Ordering.Descending)
+                    .Get();
+                commits = commitResponse.Models;
+            }
+        }
+        catch (Exception ex) 
+        { 
+            Console.WriteLine("Hata: " + ex.Message);
+            repo = null; 
+        }
+        finally { isLoading = false; }
+    }
+
+    // 2. Aboneliği İptal Et
+    public void Dispose()
+    {
+        Lang.OnChange -= StateHasChanged;
+    }
+
+    private string GetHeaderGradient(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return "background: #050510;";
+
+        int hash = name.Length + (int)name[0];
+        string[] gradients = new[] {
+            "background: linear-gradient(180deg, #312e81 0%, #050510 100%);",
+            "background: linear-gradient(180deg, #1e3a8a 0%, #050510 100%);",
+            "background: linear-gradient(180deg, #7c2d12 0%, #050510 100%);", 
+            "background: linear-gradient(180deg, #064e3b 0%, #050510 100%);",
+            "background: linear-gradient(180deg, #701a75 0%, #050510 100%);"
+        };
+        return gradients[hash % gradients.Length];
+    }
+}

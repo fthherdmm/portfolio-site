@@ -1,0 +1,123 @@
+﻿@page "/projects"
+@using PortfolioSite.Models
+@using PortfolioSite.Services
+@inject Supabase.Client SupabaseClient
+@inject LanguageService Lang
+@implements IDisposable
+
+<PageTitle>Portfolio | @Lang.Get("Projects_PageTitle")</PageTitle>
+
+<div class="container py-5">
+    <div class="text-center mb-5 fade-in">
+        <h1 class="fw-bold text-white display-5">@Lang.Get("Projects_Header")</h1>
+        <p style="color: var(--text-gray); max-width: 600px; margin: 0 auto;">
+            @Lang.Get("Projects_Desc")
+        </p>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center mt-5">
+            <div class="spinner-border text-primary" role="status"></div>
+        </div>
+    }
+    else
+    {
+        <div class="project-grid">
+            @foreach (var repo in allProjects)
+            {
+                <div class="project-card fade-in">
+                    <a href="/project/@repo.GithubId" class="text-decoration-none">
+                        <div class="card-banner" style="@GetGradient(repo.Name)">
+                            <span class="banner-icon">@GetIcon(repo.Name)</span>
+                        </div>
+                    </a>
+
+                    <div class="card-content">
+                        <div class="card-category">@Lang.Get("Badge_Project")</div>
+                        
+                        <a href="/project/@repo.GithubId" class="text-decoration-none">
+                            <h3 class="card-title text-white">@repo.Name</h3>
+                        </a>
+                        
+                        <p class="card-desc">
+                            @(string.IsNullOrEmpty(repo.Description) ? Lang.Get("Msg_NoDesc") : repo.Description)
+                        </p>
+
+                        <div class="card-footer-custom mt-auto">
+                            <div class="status-pill">
+                                <span style="width:8px; height:8px; background-color: #4ade80; border-radius:50%;"></span>
+                                @repo.LastActivityAt.ToString("MMM yyyy")
+                            </div>
+                            
+                            <div class="d-flex align-items-center gap-3 ms-auto">
+                                <a href="@repo.HtmlUrl" target="_blank" class="text-secondary text-decoration-none opacity-75 hover-opacity-100" style="font-size:0.8rem;">
+                                    @Lang.Get("Link_GitHub")
+                                </a>
+                                <a href="/project/@repo.GithubId" class="btn btn-sm text-white px-3 py-1" style="background-color: var(--accent-blue); border-radius: 6px; font-weight:600; font-size: 0.85rem; border:none;">
+                                    @Lang.Get("Btn_Inspect")
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<Repository> allProjects = new();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // 1. Dil Değişimini Dinle
+        Lang.OnChange += StateHasChanged;
+
+        try
+        {
+            var response = await SupabaseClient.From<Repository>().Order("last_activity_at", Supabase.Postgrest.Constants.Ordering.Descending).Get();
+            allProjects = response.Models.Where(x => x.IsVisible).ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    // 2. Aboneliği iptal et
+    public void Dispose()
+    {
+        Lang.OnChange -= StateHasChanged;
+    }
+
+    // Renk ve İkon Yardımcıları (Aynı)
+    private string GetGradient(string name)
+    {
+        int hash = name.Length + (int)name[0];
+        string[] gradients = new[]
+        {
+            "background: linear-gradient(135deg, #6366f1, #a855f7);",
+            "background: linear-gradient(135deg, #3b82f6, #06b6d4);",
+            "background: linear-gradient(135deg, #f59e0b, #ef4444);",
+            "background: linear-gradient(135deg, #10b981, #3b82f6);",
+            "background: linear-gradient(135deg, #ec4899, #8b5cf6);" 
+        };
+        return gradients[hash % gradients.Length];
+    }
+
+    private string GetIcon(string name)
+    {
+        if (name.ToLower().Contains("game")) return "🎮";
+        if (name.ToLower().Contains("site") || name.ToLower().Contains("web")) return "🌐";
+        if (name.ToLower().Contains("bot")) return "🤖";
+        if (name.ToLower().Contains("app")) return "📱";
+        if (name.ToLower().Contains("api")) return "⚡";
+        return "💻";
+    }
+}

@@ -1,0 +1,69 @@
+﻿@using PortfolioSite.Models
+@using PortfolioSite.Services
+@inject Supabase.Client SupabaseClient
+@inject LanguageService Lang
+@implements IDisposable
+
+<nav class="navbar navbar-expand-lg fixed-top">
+    <div class="container">
+        <a class="navbar-brand d-flex align-items-center gap-2" href="">
+            <span style="font-size: 1.8rem;">🪙</span>
+            Portfolio
+        </a>
+
+        <div class="d-flex align-items-center gap-3 ms-auto">
+
+            @if (privateCount > 0)
+            {
+            <div class="secret-badge" title="Şu an geliştirme aşamasındaki gizli projeler">
+                <span style="font-size: 1rem;">🔒</span>
+                <span class="count-text">@privateCount @Lang.Get("Nav_Private")</span>
+            </div>
+            }
+
+            <NavLink class="nav-link d-none d-md-block" href="projects">@Lang.Get("Nav_Projects")</NavLink>
+
+            <NavLink class="nav-link d-none d-md-block" href="devlog">@Lang.Get("Nav_DevLog")</NavLink>
+
+            <NavLink class="nav-link d-none d-md-block" href="timeline">@Lang.Get("Nav_Timeline")</NavLink>
+
+            <NavLink class="nav-link d-none d-md-block" href="profile">@Lang.Get("Nav_Profile")</NavLink>
+
+            <NavLink class="nav-link d-none d-md-block" href="contact">@Lang.Get("Nav_Contact")</NavLink>
+
+            <a href="https://github.com/fthherdmm" target="_blank" class="btn-cta text-decoration-none">
+                Join Club
+            </a>
+
+            <div class="ms-2 border-start ps-3 border-secondary border-opacity-25">
+                <LanguageSelector />
+            </div>
+        </div>
+    </div>
+</nav>
+
+@code {
+private int privateCount = 0;
+
+protected override async Task OnInitializedAsync()
+{
+// Dil değiştiğinde menüyü yenilemesi için abone oluyoruz
+Lang.OnChange += StateHasChanged;
+
+try
+{
+var response = await SupabaseClient.From<Repository>().Get();
+privateCount = response.Models.Count(x => x.IsPrivate);
+}
+catch (Exception ex)
+{
+Console.WriteLine("NavMenu Hatası: " + ex.Message);
+}
+}
+
+// Sayfadan çıkıldığında aboneliği iptal et (Bellek sızıntısını önler)
+public void Dispose()
+{
+Lang.OnChange -= StateHasChanged;
+}
+}

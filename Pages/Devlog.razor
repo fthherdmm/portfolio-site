@@ -1,0 +1,150 @@
+﻿@page "/devlog"
+@using PortfolioSite.Models
+@using PortfolioSite.Services
+@using System.Globalization
+@inject Supabase.Client SupabaseClient
+@inject LanguageService Lang
+@implements IDisposable
+
+<PageTitle>@Lang.Get("DevLog_PageTitle")</PageTitle>
+
+<div class="container py-5">
+    <div class="text-center mb-5 fade-in">
+        <h1 class="fw-bold text-white display-5">DevLog 📓</h1>
+        <p style="color: var(--text-gray); max-width: 600px; margin: 0 auto;">
+            @Lang.Get("DevLog_Desc")
+        </p>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center mt-5">
+            <div class="spinner-border text-primary" role="status"></div>
+        </div>
+    }
+    else if (logs.Count == 0)
+    {
+        <div class="text-center py-5" style="color: var(--text-gray);">
+            @Lang.Get("Msg_NoLogs")
+        </div>
+    }
+    else
+    {
+        <div class="log-container">
+            @foreach (var entry in logs)
+            {
+                <div class="log-card fade-in">
+                    <div class="log-date-col">
+                        <span class="day">@entry.LogDate.ToString("dd")</span>
+                        <div class="d-flex flex-column text-center">
+                            <span class="month">
+                                @entry.LogDate.ToString("MMM", Lang.CurrentLanguage == "EN" ? new CultureInfo("en-US") : new CultureInfo("tr-TR"))
+                            </span>
+                            <span class="year">@entry.LogDate.ToString("yyyy")</span>
+                        </div>
+                    </div>
+
+                    <div class="log-content-col">
+                        <div class="log-body">
+                            @{
+                            // Dil Kontrolü
+                            string displayContent = entry.Content; // Varsayılan TR
+                            if (Lang.CurrentLanguage == "EN" && !string.IsNullOrEmpty(entry.ContentEn))
+                            {
+                            displayContent = entry.ContentEn;
+                            }
+                            }
+                            @((MarkupString)FormatContent(displayContent))
+                        </div>
+                    </div>
+
+                    <div class="log-stats-col">
+                        @{
+                            var stats = GetStatsForDate(entry.LogDate);
+                        }
+                        @if (stats.CommitCount > 0)
+                        {
+                            <div class="stats-box">
+                                <div class="stats-header">
+                                    🔥 <strong>@stats.CommitCount</strong> @Lang.Get("Stat_Commit")
+                                </div>
+                                <div class="stats-projects">
+                                    @foreach (var proj in stats.Projects)
+                                    {
+                                        <span class="project-tag">@proj</span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="stats-box empty">
+                                <small>@Lang.Get("Stat_NoCommit")</small>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<DevLog> logs = new();
+    private List<Commit> allCommits = new();
+    private List<Repository> allRepos = new();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Lang.OnChange += StateHasChanged;
+
+        try
+        {
+            var logResponse = await SupabaseClient.From<DevLog>()
+                .Order("log_date", Supabase.Postgrest.Constants.Ordering.Descending)
+                .Get();
+            logs = logResponse.Models;
+
+            var commitResponse = await SupabaseClient.From<Commit>().Get();
+            allCommits = commitResponse.Models;
+
+            var repoResponse = await SupabaseClient.From<Repository>().Get();
+            allRepos = repoResponse.Models;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("DevLog Hatası: " + ex.Message);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    public void Dispose()
+    {
+        Lang.OnChange -= StateHasChanged;
+    }
+
+    private (int CommitCount, List<string> Projects) GetStatsForDate(DateTime date)
+    {
+        var dailyCommits = allCommits.Where(c => c.CommittedAt.Date == date.Date).ToList();
+        var count = dailyCommits.Count;
+        
+        var projectIds = dailyCommits.Select(c => c.RepoId.ToString()).Distinct().ToList();
+        var projectNames = allRepos
+            .Where(r => projectIds.Contains(r.GithubId.ToString()))
+            .Select(r => r.Name)
+            .Take(3)
+            .ToList();
+
+        return (count, projectNames);
+    }
+
+    private string FormatContent(string? content)
+    {
+        if (string.IsNullOrEmpty(content)) return "";
+        return content.Replace("\n", "<br>");
+    }
+}

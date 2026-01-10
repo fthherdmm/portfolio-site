@@ -1,0 +1,353 @@
+﻿@page "/admin"
+@using PortfolioSite.Models
+@using Supabase.Postgrest
+@inject Supabase.Client SupabaseClient
+
+<PageTitle>Admin Dashboard</PageTitle>
+
+@if (!isLoggedIn)
+{
+    <div style="height: 100vh; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);">
+        <div class="adm-card" style="width: 100%; max-width: 400px; text-align: center;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🔐</div>
+            <h3 class="mb-4 fw-bold text-white">Yönetici Girişi</h3>
+            <input type="password" @bind="password" class="form-control mb-3" style="background: #0f172a; border: 1px solid #334155; color: white; padding: 0.8rem;" placeholder="Şifre" />
+            <button class="btn btn-mod w-100" @onclick="Login">Giriş Yap</button>
+            @if (showError) { <p class="text-danger mt-3 small">Erişim reddedildi.</p> }
+        </div>
+    </div>
+}
+else
+{
+    <div class="dashboard-layout">
+        <aside class="adm-sidebar">
+            <div class="adm-sidebar-header">
+                <div class="adm-brand text-white"><span>🚀</span> Admin Panel</div>
+            </div>
+            
+            <div class="p-3">
+                <div class="btn-group w-100 mb-4">
+                    <button class="btn @(activeTab == "projects" ? "btn-mod" : "btn-mod-out")" @onclick='() => activeTab = "projects"'>Projeler</button>
+                    <button class="btn @(activeTab == "devlog" ? "btn-mod" : "btn-mod-out")" @onclick='() => activeTab = "devlog"'>Günlük</button>
+                </div>
+
+                @if (activeTab == "projects")
+                {
+                    <div class="repo-list custom-scroll" style="height: calc(100vh - 250px);">
+                        @foreach (var repo in repos)
+                        {
+                            <div class="repo-item @(selectedRepo == repo ? "active" : "")" @onclick="() => SelectRepo(repo)">
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-truncate">@repo.Name</span>
+                                    @if(repo.IsVisible) { <span class="status-dot online"></span> }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center text-muted mt-5">
+                        <p>📅 Tarih seçip <br>günlük girebilirsin.</p>
+                    </div>
+                }
+            </div>
+
+            <div style="padding: 1rem; border-top: 1px solid var(--adm-border); margin-top: auto;">
+                <button class="btn btn-outline-danger btn-sm w-100" @onclick="Logout">Çıkış Yap</button>
+            </div>
+        </aside>
+
+        <main class="adm-content custom-scroll">
+            <div class="adm-container">
+                
+                @if (activeTab == "projects")
+                {
+                    // --- PROJELER SEKMESİ ---
+                    if (selectedRepo != null)
+                    {
+                        <div class="adm-card fade-in">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h2 class="m-0 fw-bold text-white">@selectedRepo.Name</h2>
+                                <div class="d-flex gap-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" checked="@selectedRepo.IsVisible" @onchange="ToggleVisibility">
+                                        <label class="form-check-label text-white small">Yayında</label>
+                                    </div>
+                                    <button class="btn btn-mod-out" @onclick="OpenProjectEditor">📝 Hikaye (TR/EN)</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="commit-grid fade-in">
+                            @foreach (var commit in commits)
+                            {
+                                <div class="commit-card">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="commit-hash">@commit.CommitHash.Substring(0, 7)</span>
+                                        <span class="text-muted small">@commit.CommittedAt.ToString("dd.MM HH:mm")</span>
+                                    </div>
+                                    <p class="text-light small mb-3 flex-grow-1">@commit.Message</p>
+                                    <button class="btn btn-dark btn-sm w-100 border-secondary text-muted" @onclick="() => OpenCommitEditor(commit)">
+                                        @(string.IsNullOrEmpty(commit.MyJournalEntry) ? "+ Not Ekle" : "Düzenle")
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center text-muted opacity-50 py-5"><h3>👈 Proje Seçin</h3></div>
+                    }
+                }
+                else
+                {
+                    // --- GÜNLÜK (DEVLOG) SEKMESİ ---
+                    <div class="adm-card fade-in">
+                        <h3 class="text-white mb-4">📓 Günlük Yönetimi</h3>
+                        
+                        <div class="d-flex align-items-center gap-3 mb-4">
+                            <input type="date" class="form-control bg-dark text-white border-secondary w-auto" 
+                                   value="@selectedDate.ToString("yyyy-MM-dd")" 
+                                   @onchange="OnDateChanged" />
+                            <button class="btn btn-mod" @onclick="OpenDevLogEditor">Bu Tarihe Yazı Ekle/Düzenle (TR/EN)</button>
+                        </div>
+
+                        <div class="alert alert-dark border-secondary">
+                            <h5 class="text-info">@selectedDate.ToString("dd MMMM yyyy") Özeti:</h5>
+                            <p>Bu tarihte <strong>@commitsOnDate.Count</strong> commit atılmış.</p>
+                            <ul>
+                                @foreach(var c in commitsOnDate.Take(5))
+                                {
+                                    <li class="text-muted small">@c.Message</li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                }
+            </div>
+        </main>
+    </div>
+}
+
+@if (isEditorOpen)
+{
+    <div class="editor-overlay">
+        <div class="editor-modal">
+            <div class="editor-header">
+                <span class="text-white fw-bold">@editorTitle</span>
+                <button class="btn btn-link text-muted text-decoration-none fs-4" @onclick="CloseEditor">✕</button>
+            </div>
+            
+            <div class="editor-body custom-scroll">
+                <div class="d-flex gap-2 mb-3 pb-2 border-bottom border-secondary">
+                    <button class="btn btn-sm @(editorLangTab == "TR" ? "btn-light" : "btn-outline-secondary")" 
+                            @onclick='() => editorLangTab = "TR"'>🇹🇷 Türkçe</button>
+                    <button class="btn btn-sm @(editorLangTab == "EN" ? "btn-light" : "btn-outline-secondary")" 
+                            @onclick='() => editorLangTab = "EN"'>🇬🇧 English</button>
+                </div>
+
+                @if (editorLangTab == "TR")
+                {
+                    <textarea class="editor-textarea" @bind="editorContent" placeholder="Türkçe içerik buraya..."></textarea>
+                }
+                else
+                {
+                    <textarea class="editor-textarea" @bind="editorContentEn" placeholder="Write English content here..."></textarea>
+                }
+            </div>
+
+            <div class="editor-footer">
+                <button class="btn btn-mod-out" @onclick="CloseEditor">İptal</button>
+                <button class="btn btn-mod" @onclick="SaveEditorContent">Kaydet & Yayınla</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if(!string.IsNullOrEmpty(toastMessage))
+{
+    <div style="position: fixed; bottom: 2rem; right: 2rem; background: #064e3b; color: white; padding: 0.8rem 1.5rem; border-radius: 2rem; border: 1px solid #059669; z-index: 10000;">✅ @toastMessage</div>
+}
+
+@code {
+    private string password = "";
+    private bool isLoggedIn = false;
+    private bool showError = false;
+    private const string ADMIN_PASS = "1234";
+
+    private string activeTab = "projects";
+
+    // Veriler
+    private List<Repository> repos = new();
+    private Repository? selectedRepo;
+    private List<Commit> commits = new();
+    
+    // DevLog Verileri
+    private DateTime selectedDate = DateTime.Today;
+    private List<Commit> commitsOnDate = new();
+    private DevLog? currentLog;
+
+    // Editör Verileri
+    private bool isEditorOpen = false;
+    private string editorTitle = "";
+    private string editorMode = ""; 
+    
+    private string editorContent = "";   // Türkçe
+    private string editorContentEn = ""; // İngilizce
+    private string editorLangTab = "TR"; // Aktif sekme
+
+    private Commit? editingCommit;
+    private string? toastMessage;
+
+    protected override async Task OnInitializedAsync() 
+    { 
+        await LoadRepos(); 
+        await LoadCommitsForDate(DateTime.Today);
+    }
+    
+    private void Login() { if (password == ADMIN_PASS) isLoggedIn = true; else showError = true; }
+    private void Logout() { isLoggedIn = false; password = ""; }
+
+    // --- VERİ YÜKLEME ---
+    private async Task LoadRepos()
+    {
+        var response = await SupabaseClient.From<Repository>().Order("last_activity_at", Constants.Ordering.Descending).Get();
+        repos = response.Models;
+    }
+
+    private async Task SelectRepo(Repository repo)
+    {
+        selectedRepo = repo;
+        var response = await SupabaseClient.From<Commit>()
+            .Filter("repo_id", Constants.Operator.Equals, repo.GithubId.ToString())
+            .Order("committed_at", Constants.Ordering.Descending)
+            .Limit(50).Get();
+        commits = response.Models;
+    }
+
+    private async Task ToggleVisibility(ChangeEventArgs e)
+    {
+        if (selectedRepo == null) return;
+        selectedRepo.IsVisible = (bool)e.Value!;
+        await SupabaseClient.From<Repository>().Update(selectedRepo);
+        ShowToast("Güncellendi!");
+    }
+
+    private async Task OnDateChanged(ChangeEventArgs e)
+    {
+        if (DateTime.TryParse(e.Value?.ToString(), out DateTime date))
+        {
+            selectedDate = date;
+            await LoadCommitsForDate(date);
+        }
+    }
+
+    private async Task LoadCommitsForDate(DateTime date)
+    {
+        var allCommitsResp = await SupabaseClient.From<Commit>().Get();
+        commitsOnDate = allCommitsResp.Models.Where(c => c.CommittedAt.Date == date.Date).ToList();
+    }
+
+    // --- EDİTÖR AÇMA (İngilizce Yüklemeli) ---
+    private void OpenProjectEditor()
+    {
+        editorMode = "repo_story";
+        editorTitle = "Hikaye: " + selectedRepo?.Name;
+        editorContent = selectedRepo?.MyProjectStory ?? "";
+        editorContentEn = selectedRepo?.MyProjectStoryEn ?? ""; // EN yükle
+        editorLangTab = "TR";
+        isEditorOpen = true;
+    }
+
+    private void OpenCommitEditor(Commit commit)
+    {
+        editorMode = "commit_note";
+        editingCommit = commit;
+        editorTitle = "Commit Notu";
+        editorContent = commit.MyJournalEntry ?? "";
+        editorContentEn = commit.MyJournalEntryEn ?? ""; // EN yükle
+        editorLangTab = "TR";
+        isEditorOpen = true;
+    }
+
+    private async Task OpenDevLogEditor()
+    {
+        editorMode = "devlog";
+        editorTitle = $"{selectedDate:dd MMMM} Günlüğü";
+        
+        // Tarihe göre sorgula (LogDate Primary Key olduğu için bu yeterli)
+        var logResp = await SupabaseClient.From<DevLog>()
+            .Filter("log_date", Constants.Operator.Equals, selectedDate.ToString("yyyy-MM-dd"))
+            .Single();
+            
+        currentLog = logResp;
+        
+        if (currentLog != null) 
+        {
+            editorContent = currentLog.Content ?? "";
+            editorContentEn = currentLog.ContentEn ?? ""; 
+        }
+        else 
+        {
+            editorContent = "";
+            editorContentEn = "";
+        }
+        
+        editorLangTab = "TR";
+        isEditorOpen = true;
+    }
+
+    private void CloseEditor() { isEditorOpen = false; }
+
+    // --- KAYDETME ---
+    private async Task SaveEditorContent()
+    {
+        try 
+        {
+            if (editorMode == "repo_story" && selectedRepo != null)
+            {
+                selectedRepo.MyProjectStory = editorContent;
+                selectedRepo.MyProjectStoryEn = editorContentEn; // EN kaydet
+                await SupabaseClient.From<Repository>().Update(selectedRepo);
+            }
+            else if (editorMode == "commit_note" && editingCommit != null)
+            {
+                editingCommit.MyJournalEntry = editorContent;
+                editingCommit.MyJournalEntryEn = editorContentEn; // EN kaydet
+                await SupabaseClient.From<Commit>().Update(editingCommit);
+            }
+            else if (editorMode == "devlog")
+            {
+                // Saat farkı ayarı (Supabase UTC alır, biz 12:00 yapıp günü sabitliyoruz)
+                var safeDate = selectedDate.Date.AddHours(12);
+
+                var newLog = new DevLog 
+                { 
+                    LogDate = safeDate, // 🔥 Burası PRIMARY KEY, ID yerine geçiyor
+                    Content = editorContent,
+                    ContentEn = editorContentEn,
+                    CreatedAt = DateTime.UtcNow
+                };
+                
+                // Primary Key (LogDate) aynıysa güncelle, yoksa ekle (Upsert)
+                await SupabaseClient.From<DevLog>().Upsert(newLog);
+            }
+            
+            ShowToast("Kaydedildi! 💾");
+            CloseEditor();
+        }
+        catch(Exception ex) 
+        { 
+            Console.WriteLine(ex.Message);
+            ShowToast("Bir hata oluştu!");
+        }
+    }
+
+    private void ShowToast(string msg)
+    {
+        toastMessage = msg;
+        StateHasChanged();
+        Task.Delay(3000).ContinueWith(_ => { toastMessage = null; InvokeAsync(StateHasChanged); });
+    }
+}

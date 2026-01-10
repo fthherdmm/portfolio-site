@@ -1,0 +1,21 @@
+﻿@inject PortfolioSite.Services.LanguageService Lang
+
+<div class="lang-switch d-flex gap-2 align-items-center">
+    <button class="btn btn-sm @(Lang.CurrentLanguage == "TR" ? "btn-light" : "btn-outline-secondary")" 
+            @onclick='async () => await ChangeLang("TR")'>TR</button>
+            
+    <span class="text-secondary">|</span>
+    
+    <button class="btn btn-sm @(Lang.CurrentLanguage == "EN" ? "btn-light" : "btn-outline-secondary")" 
+            @onclick='async () => await ChangeLang("EN")'>EN</button>
+</div>
+
+@code {
+    private async Task ChangeLang(string lang)
+    {
+        await Lang.SetLanguage(lang);
+    }
+    
+    protected override void OnInitialized() => Lang.OnChange += StateHasChanged;
+    public void Dispose() => Lang.OnChange -= StateHasChanged;
+}

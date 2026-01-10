@@ -1,0 +1,256 @@
+﻿@page "/profile"
+@using PortfolioSite.Services
+@inject LanguageService Lang
+@implements IDisposable
+
+<PageTitle>@Lang.Get("Profile_PageTitle") | Muhammed Fatih Erdem</PageTitle>
+
+<div class="container py-5">
+
+    <div class="text-center mb-5 fade-in">
+        <h1 class="fw-bold text-white display-5">Muhammed Fatih Erdem</h1>
+        <p class="text-info fs-5" style="max-width: 600px; margin: 0 auto; letter-spacing: 1px;">
+            @Lang.Get("Profile_JobTitle")
+        </p>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+
+            <div class="profile-card fade-in mb-4">
+                <div class="p-4 p-md-5">
+                    <h3 class="section-title">@Lang.Get("Sec_About")</h3>
+                    <div class="bio-text">
+                        <p>@((MarkupString)Lang.Get("Bio_P1"))</p>
+                        <p>@((MarkupString)Lang.Get("Bio_P2"))</p>
+                        <p>@Lang.Get("Bio_P3")</p>
+                        <p>@((MarkupString)Lang.Get("Bio_P4"))</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-4">
+                    <div class="profile-card fade-in h-100 p-4">
+
+                        <h3 class="section-title mb-4">@Lang.Get("Sec_Education")</h3>
+                        <div class="timeline-item">
+                            <div class="timeline-icon">🏛️</div>
+                            <div class="timeline-content">
+                                <h5 class="fw-bold text-white m-0">@Lang.Get("Edu_YBU_Name")</h5>
+                                <span class="text-info small">@Lang.Get("Edu_YBU_Dept")</span>
+                                <p class="mt-2 text-white-50 small">
+                                    @Lang.Get("Edu_YBU_Desc")
+                                </p>
+                            </div>
+                        </div>
+
+                        <hr class="border-secondary my-4 opacity-25" />
+
+                        <h3 class="section-title mb-4">@Lang.Get("Sec_Experience")</h3>
+
+                        <div class="timeline-item">
+                            <div class="timeline-icon">✈️</div>
+                            <div class="timeline-content">
+                                <h5 class="fw-bold text-white m-0">@Lang.Get("Exp_Tusas_Title")</h5>
+                                <span class="text-info small">@Lang.Get("Exp_Tusas_Role")</span>
+                                <p class="mt-2 text-white-50 small">
+                                    @Lang.Get("Exp_Tusas_Desc")
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="timeline-item">
+                            <div class="timeline-icon">🌍</div>
+                            <div class="timeline-content">
+                                <h5 class="fw-bold text-white m-0">@Lang.Get("Exp_ESC_Title")</h5>
+                                <span class="text-info small">@Lang.Get("Exp_ESC_Role")</span>
+                                <p class="mt-2 text-white-50 small">
+                                    @Lang.Get("Exp_ESC_Desc")
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="timeline-item">
+                            <div class="timeline-icon">🎮</div>
+                            <div class="timeline-content">
+                                <h5 class="fw-bold text-white m-0">@Lang.Get("Exp_Simge_Title")</h5>
+                                <span class="text-info small">@Lang.Get("Exp_Simge_Role")</span>
+                                <p class="mt-2 text-white-50 small">
+                                    @Lang.Get("Exp_Simge_Desc")
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="timeline-item">
+                            <div class="timeline-icon">📱</div>
+                            <div class="timeline-content">
+                                <h5 class="fw-bold text-white m-0">@Lang.Get("Exp_Udo_Title")</h5>
+                                <span class="text-info small">@Lang.Get("Exp_Udo_Role")</span>
+                                <p class="mt-2 text-white-50 small">
+                                    @Lang.Get("Exp_Udo_Desc")
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6 mb-4">
+                    <div class="profile-card fade-in h-100 p-4">
+                        <h3 class="section-title mb-4">@Lang.Get("Sec_Skills")</h3>
+
+                        <div class="skill-group mb-4">
+                            <h6 class="skill-label">@Lang.Get("Skill_Cat_Lang")</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                <span class="skill-tag">C#</span>
+                                <span class="skill-tag">C++</span>
+                                <span class="skill-tag">C</span>
+                                <span class="skill-tag">Python</span>
+                                <span class="skill-tag">Java</span>
+                            </div>
+                        </div>
+
+                        <div class="skill-group mb-4">
+                            <h6 class="skill-label">@Lang.Get("Skill_Cat_Framework")</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                <span class="skill-tag">ASP.NET Core Web API</span>
+                                <span class="skill-tag">Entity Framework Core</span>
+                                <span class="skill-tag">MediatR</span>
+                                <span class="skill-tag">AutoMapper</span>
+                                <span class="skill-tag">Fluent Validation</span>
+                                <span class="skill-tag">Swagger/OpenAPI</span>
+                            </div>
+                        </div>
+
+                        <div class="skill-group mb-4">
+                            <h6 class="skill-label">@Lang.Get("Skill_Cat_Db")</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                <span class="skill-tag">PostgreSQL</span>
+                                <span class="skill-tag">MS SQL Server</span>
+                                <span class="skill-tag">Redis (Caching)</span>
+                            </div>
+                        </div>
+
+                        <div class="skill-group mb-4">
+                            <h6 class="skill-label">@Lang.Get("Skill_Cat_Arch")</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                <span class="skill-tag">Clean Architecture</span>
+                                <span class="skill-tag">CQRS Pattern</span>
+                                <span class="skill-tag">SOLID Principles</span>
+                                <span class="skill-tag">Dependency Injection</span>
+                                <span class="skill-tag">Repository Pattern</span>
+                                <span class="skill-tag">Unit of Work</span>
+                            </div>
+                        </div>
+
+                        <div class="skill-group">
+                            <h6 class="skill-label">@Lang.Get("Skill_Cat_DevOps")</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                <span class="skill-tag">Git</span>
+                                <span class="skill-tag">GitHub</span>
+                                <span class="skill-tag">Docker</span>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-4 fade-in">
+                    <p style="color: #cbd5e1;">
+                        @Lang.Get("Profile_Contact_Text")
+                     </p>
+                <div class="d-flex justify-content-center gap-3">
+                    <a href="mailto:mm.fatiherdem@gmail.com" class="btn btn-outline-light px-4">@Lang.Get("Btn_SendEmail")</a>
+                    <a href="https://github.com/fthherdmm" target="_blank" class="btn btn-dark px-4 border-secondary">GitHub</a>
+                    <a href="https://www.linkedin.com/in/fatih-erdem-89237823b/" target="_blank" class="btn btn-primary px-4" style="background: #0077b5; border:none;">LinkedIn</a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Profil Kartı */
+    .profile-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 1rem;
+        box-shadow: 0 10px 30px -10px rgba(0,0,0,0.3);
+    }
+
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: white;
+        border-bottom: 2px solid rgba(59, 130, 246, 0.3); /* accent-blue alpha */
+        padding-bottom: 10px;
+        display: inline-block;
+    }
+
+    .bio-text p {
+        color: #cbd5e1; /* slate-300 */
+        line-height: 1.8;
+        font-size: 1.05rem;
+        margin-bottom: 1rem;
+    }
+    .bio-text strong { color: var(--accent-blue); }
+
+    /* Timeline (Eğitim/Deneyim) */
+    .timeline-item {
+        display: flex; gap: 15px; margin-bottom: 2rem;
+    }
+    .timeline-icon {
+        font-size: 1.5rem;
+        background: rgba(255,255,255,0.05);
+        width: 50px; height: 50px;
+        border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        border: 1px solid var(--border-color);
+        flex-shrink: 0;
+    }
+    .timeline-content { flex: 1; }
+
+    /* Yetkinlikler */
+    .skill-label {
+        color: var(--text-gray);
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 10px;
+        font-weight: 700;
+    }
+    .skill-tag {
+        background: rgba(59, 130, 246, 0.1);
+        color: #e2e8f0;
+        border: 1px solid rgba(59, 130, 246, 0.2);
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: 0.2s;
+        cursor: default;
+    }
+    .skill-tag:hover {
+        background: var(--accent-blue);
+        color: white;
+        transform: translateY(-2px);
+    }
+
+    .fade-in { animation: fadeIn 0.5s ease-out; }
+    @("@keyframes") fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+                </style>
+
+@code {
+protected override void OnInitialized()
+{
+Lang.OnChange += StateHasChanged;
+}
+
+public void Dispose()
+{
+Lang.OnChange -= StateHasChanged;
+}
+}
