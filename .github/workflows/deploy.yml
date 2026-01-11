@@ -1,4 +1,4 @@
-﻿name: Deploy to GitHub Pages
+name: Deploy to GitHub Pages
 
 on:
   push:
@@ -8,26 +8,31 @@ jobs:
   deploy-to-github-pages:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+    - uses: actions/checkout@v3
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v3
-        with:
-          dotnet-version: '8.0.x' # .NET 8 kullandığını varsayıyorum
-      
-      # Proje ana dizinde olduğu için direkt publish alıyoruz
-      - name: Publish with dotnet
-        run: dotnet publish -c Release -o release --nologo
-      
-      # 404 Hack (Blazor için gerekli)
-      - name: Copy index.html to 404.html
-        run: cp release/wwwroot/index.html release/wwwroot/404.html
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '9.0.x'
 
-      - name: Add .nojekyll file
-        run: touch release/wwwroot/.nojekyll
+    # DİKKAT: Eğer .csproj dosyan 'PortfolioSite' klasörünün içindeyse:
+    # run: dotnet publish PortfolioSite -c Release -o release --nologo
+    
+    # DİKKAT: Eğer .csproj dosyan direkt reponun ana dizinindeyse (Seçenek 2'yi yaptıysan):
+    - name: Publish with dotnet
+      run: dotnet publish -c Release -o release --nologo
 
-      - name: Commit wwwroot to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          branch: gh-pages
-          folder: release/wwwroot
+    # Blazor için 404 hack
+    - name: Copy index.html to 404.html
+      run: cp release/wwwroot/index.html release/wwwroot/404.html
+
+    # Jekyll'i kapat
+    - name: Add .nojekyll file
+      run: touch release/wwwroot/.nojekyll
+
+    # Dosyaları yükle
+    - name: Commit wwwroot to GitHub Pages
+      uses: JamesIves/github-pages-deploy-action@v4
+      with:
+        branch: gh-pages
+        folder: release/wwwroot
